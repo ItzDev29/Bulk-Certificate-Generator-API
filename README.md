@@ -142,35 +142,22 @@ same one a real queue would sit behind (only `JobDispatcher` would change).
   the valid recipients still proceed. Recipients are therefore validated in the service layer,
   not by FastAPI's schema, to avoid one typo rejecting a 1000-row upload.
 
-**Failure isolation.** Each certificate is rendered, written, and committed on its own inside
+**Failure isolation:** Each certificate is rendered, written, and committed on its own inside
 a `try/except`; any exception (rendering, disk, …) marks only that certificate `failed`.
 Job status is derived at the end: all ok → `completed`, mixed → `completed_with_errors`,
 none ok → `failed`. Per-certificate commits also give live progress while a job runs.
 
-**Data model.** `jobs` (shared certificate info, status, timestamps) and `certificates` (one
+**Data model:** `jobs` (shared certificate info, status, timestamps) and `certificates` (one
 row per submitted recipient, valid or not, with status, error, relative file path, and
 `position`). Counts are computed with a grouped query, so they can't drift from the rows.
 Files are written to a temp name then atomically renamed; the DB stores relative paths only.
 
-**Reliability.** A job is claimed with an atomic `UPDATE … WHERE status='pending'`, so it can't
+**Reliability:** A job is claimed with an atomic `UPDATE … WHERE status='pending'`, so it can't
 be processed twice. On startup, unfinished jobs (e.g. after a crash) are re-queued; processing
 only touches still-`pending` certificates, so it resumes rather than restarts.
 
-**PDF.** ReportLab, one hard-coded landscape A4 template (border, title, name, event, optional
+**PDF:** ReportLab, one hard-coded landscape A4 template (border, title, name, event, optional
 achievement, date, issuer, certificate ID). Long names/titles shrink or wrap to fit.
-
-## Limitations / next steps
-
-- **Single-process queue.** Run with one app process (no `--workers N`); the startup recovery
-  assumes it owns the queue. For multiple workers or horizontal scale, swap `JobDispatcher`
-  for Celery/RQ/arq and run workers separately.
-- **Latin-script text only.** The built-in PDF fonts can't draw e.g. Devanagari, so such names
-  are rejected at validation time with a clear error rather than rendered as boxes. To support
-  them, register a Unicode TTF (e.g. Noto Sans) in `app/services/pdf.py` and relax
-  `ensure_renderable` in `app/schemas.py`.
-- No authentication, rate limiting, or idempotency keys; add them before exposing publicly.
-- Schema is created with `create_all`; use Alembic migrations in production.
-- Local-disk storage; swap `CertificateStorage` for S3/GCS if needed.
 
 ## 📂 Project Architecture
 
