@@ -7,9 +7,6 @@
 
 An asynchronous, high-throughput FastAPI backend that processes bulk certificate generation requests in the background. Submit up to 1,000 recipients in a single HTTP request, track live job progress, and download generated PDF certificates individually or as a `.zip` archive.
 
-<!-- Place your header image/architecture diagram at docs/images/hero-banner.png -->
-![Bulk Certificate Generator Banner](docs/images/hero-banner.png)
-
 ## ✨ Key Features
 
 - ⚡ **Asynchronous Background Processing:** Accepts bulk jobs instantly (`202 Accepted`) and hands off PDF rendering to a managed background thread pool.
@@ -198,28 +195,30 @@ flowchart TD
     %% Node Definitions
     Client([Client / Postman])
     API[FastAPI POST /api/v1/certificate-jobs]
-    ReqVal{Request Validation<br/>(Global Fields & Length)}
+    ReqVal{Request Validation<br/>Global Fields & Length}
+    Reject[Return 422 Unprocessable Entity]
     DB[(Database<br/>SQLite / PostgreSQL)]
     Dispatcher[ThreadPoolExecutor<br/>Job Dispatcher]
     
     RecipLoop[Iterate Recipients]
-    RecipVal{Recipient Validation<br/>(Email, Name, Script)}
+    RecipVal{Recipient Validation<br/>Email, Name, Script}
     RenderPDF[ReportLab Engine<br/>Render PDF & Write to Disk]
     
-    DBPending[(Store Certificate:<br/>'pending')]
-    DBSuccess[(Store Certificate:<br/>'generated')]
-    DBFailed[(Store Certificate:<br/>'failed')]
+    DBPending[(Store Certificate:<br/>pending)]
+    DBSuccess[(Store Certificate:<br/>generated)]
+    DBFailed[(Store Certificate:<br/>failed)]
     
     JobStatus{Derive Job Status}
-    StatusComp[status: 'completed']
-    StatusErr[status: 'completed_with_errors']
-    StatusFail[status: 'failed']
+    StatusComp[status: completed]
+    StatusErr[status: completed_with_errors]
+    StatusFail[status: failed]
+    Storage[/Data Directory / Storage/]
 
     %% Workflow Connections
     Client -->|1. Submit Job Payload| API
     API --> ReqVal
     
-    ReqVal -->|Invalid | Reject[Return 422 Unprocessable Entity]
+    ReqVal -->|Invalid| Reject
     ReqVal -->|Valid| DB
     DB -->|2. Persist Job & Recipients| Dispatcher
     API -->|3. Return 202 Accepted + Job ID| Client
@@ -227,7 +226,7 @@ flowchart TD
     Dispatcher --> RecipLoop
     RecipLoop --> RecipVal
 
-    RecipVal -->|Invalid Email/Script| DBFailed
+    RecipVal -->|Invalid Data| DBFailed
     RecipVal -->|Valid Data| DBPending
     
     DBPending --> RenderPDF
@@ -241,6 +240,5 @@ flowchart TD
     JobStatus -->|Some Failed| StatusErr
     JobStatus -->|All Failed| StatusFail
 
-    Client -.->|4. Poll GET /api/v1/certificate-jobs/job_id| DB
-    Client -.->|5. Download ZIP GET /api/v1/certificate-jobs/job_id/download| Storage[/Data Directory / Storage/]
-```
+    Client -.->|4. Poll Status| DB
+    Client -.->|5. Download ZIP| Storage
