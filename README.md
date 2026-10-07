@@ -57,6 +57,9 @@ Tests use a temporary SQLite file and temp storage per test; no setup needed.
 
 ## API
 
+<img width="2392" height="3002" alt="APIs" src="https://github.com/user-attachments/assets/194df05a-f31b-4774-aa02-db5269b98d9c" />
+
+
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/v1/certificate-jobs` | Submit a bulk request → `202` + job (with `Location` header) |
@@ -82,6 +85,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/certificate-jobs \
     ]
   }'
 ```
+<img width="1950" height="1174" alt="Screenshot 2026-10-08 000953" src="https://github.com/user-attachments/assets/52410e7f-4bae-4876-bdbe-6b8f22de819f" />
 
 Job-level fields: `event_name` (required), `issued_by` (required), `issue_date` (default today),
 `certificate_title` (default "Certificate of Completion"). Per recipient: `name` (1–80 chars),
@@ -105,6 +109,8 @@ curl http://127.0.0.1:8000/api/v1/certificate-jobs/<job_id>
 `failures[]` lists failed recipients with their original `position` in your list and an `error`.
 For all failures: `…/certificates?status=failed`.
 
+<img width="1952" height="1184" alt="Screenshot 2026-10-08 001305" src="https://github.com/user-attachments/assets/7536e48b-395b-450c-ae17-9a4f5c1e8ea0" />
+
 ### Retrieve certificates
 
 ```bash
@@ -115,9 +121,12 @@ curl -OJ http://127.0.0.1:8000/api/v1/certificates/<certificate_id>/download
 # everything as a ZIP (only once the job has finished)
 curl -OJ http://127.0.0.1:8000/api/v1/certificate-jobs/<job_id>/download
 ```
+<img width="1978" height="1183" alt="Screenshot 2026-10-08 001611" src="https://github.com/user-attachments/assets/926e1f40-4469-4f95-84cb-4883944dbb10" />
 
 Error codes: `404` unknown id, `409` not ready (certificate pending/failed, job unfinished or
 nothing generated), `410` file missing from storage, `422` invalid request.
+
+<img width="1976" height="1162" alt="Screenshot 2026-10-08 001804" src="https://github.com/user-attachments/assets/523da4c1-9ad0-4e55-ab77-9576614de3bd" />
 
 ## Design decisions
 
@@ -182,6 +191,7 @@ app/
     ├── processor.py     # Worker thread pool, dispatcher & recovery loop
     ├── pdf.py           # ReportLab certificate rendering engine
     └── storage.py       # File system management for PDF storage
+```
 
 ```mermaid
 flowchart TD
@@ -233,3 +243,4 @@ flowchart TD
 
     Client -.->|4. Poll GET /api/v1/certificate-jobs/job_id| DB
     Client -.->|5. Download ZIP GET /api/v1/certificate-jobs/job_id/download| Storage[/Data Directory / Storage/]
+```
